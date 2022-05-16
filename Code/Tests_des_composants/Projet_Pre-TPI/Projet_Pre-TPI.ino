@@ -56,7 +56,8 @@ void setup() {
 void loop() {
   lcd.clear();//Remmet l'affichage LCD à 0
   buttonState = digitalRead(5);//Lecture de l'état du bouton
-
+  Serial.println(buttonState);
+  
   //cette condition permet d'afficher les moyennes dans le terminal et dans l'affichage LCD au bout de 5 prises de mesures
   if (countValues % arrayMaxSize == 0) {
     valuesDisplayed();

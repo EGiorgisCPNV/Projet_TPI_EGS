@@ -8,7 +8,7 @@
 #include <Wire.h>
 #include "Adafruit_SGP30.h"//librairie pour le capteur SGP30
 
-Adafruit_SGP30 sgp;
+Adafruit_SGP30 sgp = Adafruit_SGP30();
 
 void setup() {
   Serial.begin(9600);
