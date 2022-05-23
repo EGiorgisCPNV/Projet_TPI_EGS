@@ -15,10 +15,10 @@
 
 //Constantes
 #define NUMPIXELS 60 //Nombre de LED
-#define BACKPACK_LUMINOSITY 10 //Valeur indiquant la luminosité de l'affichage 7 segments de 0 à 15
+#define BACKPACK_LUMINOSITY 110 //Valeur indiquant la luminosité de l'affichage 7 segments de 0 à 15
 #define PIXELS_LUMINOSITY 100 //Valeur indiquant la luminosité des LED de l'horloge de 0 à 255
 #define WAITING_TIME 3000 //Valeur, en millisecondes, indiquant le nombre de millisecondes que va durer chaque alternance pour le premier mode d'affichage de l'affichage 7 segments
-#define MAX_CO2_ALLOWED 1500 //Le taux de CO2 maximal autorisé avant une alerte
+#define MAX_CO2_ALLOWED 650 //Le taux de CO2 maximal autorisé avant une alerte
 
 //Variables Globales
 Adafruit_BME280 bme;//initialisation du bme
@@ -27,34 +27,40 @@ Adafruit_SGP30 sgp = Adafruit_SGP30();//initialisation du capteur de CO2 SGP30
 Adafruit_7segment backPackDisplay = Adafruit_7segment();//initialisation de l'affichage 7 segments
 Adafruit_NeoPixel ledClock(NUMPIXELS, 2);//Initialisation de l'horloge 60 LED en commençant par indiquer le nombre de LED total que possède notre horloge(60) et sur quel pin elle est branchée(2)
 
-//Variables 
+//Variables liées au status des capteurs
 unsigned rtcStatus;
 unsigned bmeStatus;
 unsigned sgpStatus;
+
+//Variables liées au temps
 int hours = 0;
 int minutes = 0;
 int seconds = 0;
 bool doublePoints;//cette variable permet l'affichage des secondes en alternant sa valeur par true et false chaque seconde
-int displayChoice;//Variable indiquant au programme qu'est-ce que l'affichage 7 segments doit afficher
-int alertChoice;//Variable indiquant au programme qu'elle alarme il doit utiliser dans le cas ou le taux de CO2 dépasse un seuil voulu
-int stateDisplayButton;//variable lié a l'état du bouton poussoir pour changer l'affichage 7 segments
-int reverseStateDisplayButton;//variable contenant l'inverse de la variable "stateDisplayButton" qui permettra ensuite de bloquer le changement d'état si l'utilisateur reste appuié sur le boutton poussoir
-int stateAlertButton;//variable lié a l'état du bouton poussoir pour changer l'alerte en cas de trop haut taux de CO2
-int reverseStateAlertButton;//variable contenant l'inverse de la variable "stateAlertButton" qui permettra ensuite de bloquer le changement d'état si l'utilisateur reste appuié sur le boutton poussoir
-int phase;//variable indiquant la phase dans laquelle on se trouve
 unsigned long timeToWait;//Cette variable permet au programme, en plus de la constante "WAITING_TIME", d'alterner les 3 affichages. À noter que le type choisi "unsigned long" permet de faire durer un maximum de temps l'alternance des 3 affichages, en effet le type "unsigned" simple permet une valeur au maximum codée sur 4 octets, contrairement au type "unsigned long" qui permet une valeur max codée sur 8 octets.
 unsigned lastSecond;//Cette variable permet de garder en mémoire pour chaque boucle effectué par la fonction "loop()" la dernière valeur retournée par la fonction "millis()"
 
-/*
- * Fonction setup
-*/
+//Variables liées à l'affichage 7 segments
+int displayChoice;//Variable indiquant au programme qu'est-ce que l'affichage 7 segments doit afficher
+int phase;//variable indiquant la phase dans laquelle on se trouve
+int stateDisplayButton;//variable lié a l'état du bouton poussoir pour changer l'affichage 7 segments
+int reverseStateDisplayButton;//variable contenant l'inverse de la variable "stateDisplayButton" qui permettra ensuite de bloquer le changement d'état si l'utilisateur reste appuié sur le boutton poussoir
+
+//Variables liées aux alertes
+int stateAlertButton;//variable lié a l'état du bouton poussoir pour changer l'alerte en cas de trop haut taux de CO2
+int reverseStateAlertButton;//variable contenant l'inverse de la variable "stateAlertButton" qui permettra ensuite de bloquer le changement d'état si l'utilisateur reste appuié sur le boutton poussoir
+int alertChoice;//Variable indiquant au programme qu'elle alarme il doit utiliser dans le cas ou le taux de CO2 dépasse un seuil voulu
+
+
 void setup() {
   Serial.begin(9600);
   displayChoice = 0;//Initialisation de la variable "displayChoice" à 0 
   alertChoice = 0;//Initialisation de la variable "alertChoice" à 0 
-  pinMode(3, INPUT_PULLUP);//initialisation de la pin 3 en INPUT_PULLUP
-  pinMode(4, INPUT_PULLUP); // initialisation de la pin 4 en INPUT_PULLUP
-  pinMode(5, INPUT_PULLUP); // initialisation de la pin 5 en INPUT_PULLUP
+
+  //Configuration des entrée et sortie 
+  pinMode(3, INPUT_PULLUP);//initialisation de la pin pour le bouton poussoir lié au changement du contenu de l'affichage 7 segments en INPUT_PULLUP
+  pinMode(4, INPUT_PULLUP);//initialisation de la pin pour le bouton poussoir lié au buzzer en INPUT_PULLUP
+  pinMode(5, INPUT_PULLUP);//initialisation de la pin pour le bouton poussoir lié au changement du contenu de l'option d'alarme en INPUT_PULLUP
   phase = 1;//initialisation de la variable de phase a 1
   timeToWait = WAITING_TIME;//initialisation de la variable "timeToWait" en la rendant correspondant à la durée de chaque alternance d'affichage 
 
@@ -87,9 +93,7 @@ void setup() {
 }
 
 
-/*
- * Fonction loop
-*/
+
 void loop() {
   fallingEdgeDetection();//Appel de la fonction pour vérifier l'état des deux boutons poussoir
   alarmDetection();//Appel de la function qui permet d'alerter si le taux de CO2 est trop élevé
