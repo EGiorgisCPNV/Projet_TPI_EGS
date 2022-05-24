@@ -19,8 +19,9 @@
 #define BACKPACK_LUMINOSITY 10 //Valeur indiquant la luminosité de l'affichage 7 segments de 0 à 15
 #define PIXELS_LUMINOSITY 100 //Valeur indiquant la luminosité des LED de l'horloge de 0 à 255
 #define WAITING_TIME 3000 //Valeur, en millisecondes, indiquant le nombre de millisecondes que va durer chaque alternance pour le premier mode d'affichage de l'affichage 7 segments
-#define MAX_CO2_ALLOWED 1500 //Le taux de CO2 maximal autorisé avant une alerte
-
+#define MAX_CO2_ALLOWED 650 //Le taux de CO2 maximal autorisé avant une alerte
+#define ALARME_DURATION 2000//Valeur en milliseconde indiquant la durée max de l'alerte en cas de trop haut taux de CO2
+#define DELAY_ALARME_DURATION 5000//Valeur en milliseconde indiquant la durée à laquelle même si le taux de CO2 est trop élevé, aucune alarme ne sera générée
 
 //Variables Globales
 Adafruit_BME280 bme;//initialisation du bme
@@ -36,10 +37,12 @@ unsigned bmeStatus;
 unsigned sgpStatus;
 int calibrationCounter;//cette variable est un compteur pour effectuer un calibrage du capteur SGP30 
 
+
 //Variables liées au temps
 int hours = 0;
 int minutes = 0;
 int seconds = 0;
+unsigned long nextAlarm = 0;//cette variable indique le temps d'attente avant la prochaine alarme
 bool doublePoints;//cette variable permet l'affichage des secondes en alternant sa valeur par true et false chaque seconde
 unsigned long timeToWait;//Cette variable permet au programme, en plus de la constante "WAITING_TIME", d'alterner les 3 affichages. À noter que le type choisi "unsigned long" permet de faire durer un maximum de temps l'alternance des 3 affichages, en effet le type "unsigned" simple permet une valeur au maximum codée sur 4 octets, contrairement au type "unsigned long" qui permet une valeur max codée sur 8 octets.
 unsigned lastSecond;//Cette variable permet de garder en mémoire pour chaque boucle effectué par la fonction "loop()" la dernière valeur retournée par la fonction "millis()"
@@ -62,7 +65,7 @@ void setup() {
   Serial.begin(9600);
   displayChoice = 0;//Initialisation de la variable "displayChoice" à 0 
   alertChoice = 0;//Initialisation de la variable "alertChoice" à 0 
-  calibrationCounter = 0;
+  calibrationCounter = 0;//Initialisation de la variable "calibrationCounter" à 0 
 
   //Configuration des entrée et sortie 
   pinMode(3, INPUT_PULLUP);//initialisation de la pin pour le bouton poussoir lié au changement du contenu de l'affichage 7 segments en INPUT_PULLUP
@@ -104,7 +107,11 @@ void setup() {
 
 void loop() {
   fallingEdgeDetection();//Appel de la fonction pour vérifier l'état des deux boutons poussoir
-  alarmDetection();//Appel de la function qui permet d'alerter si le taux de CO2 est trop élevé
+
+  //Cette condition permet de verifier le taux de CO2 tant qu'aucune alarme n'est générée 
+  if(millis() > nextAlarm) {
+    alarmDetection();//Appel de la function qui permet d'alerter si le taux de CO2 est trop élevé
+  }
   
   //cette condition permet, dans le cas ou le programme est dans la phase une, d'alterner les 3 affichages
   if(phase == 1){
@@ -221,7 +228,7 @@ int getCurrentTime(){
 */
 void displayCurrentTime(){
   doublePoints = false;//De base les double point des secondes sont éteintes
-  float doublePointDuration= millis() + 200;//Variable indiquant la durée ou les doubles points des secondes doivent rester allumée
+  unsigned long doublePointDuration = millis() + 200;//Variable indiquant la durée ou les doubles points des secondes doivent rester allumée
 
   backPackDisplay.print(getCurrentTime());//Prépare l'affichage de l'horraire actuel sur l'affichage 7 segments
 
@@ -278,8 +285,6 @@ void displayTemperature(){
 */
 float getCOTwoRate(){ 
 
-   
-
    //Effectue régulièrement un calibrage du capteur SGP30
    if(calibrationCounter == 100){
     calibrationCounter = 0;
@@ -293,7 +298,6 @@ float getCOTwoRate(){
     calibrationCounter++;
     
     sgp.IAQmeasure();//demande au capteur de mesurer une seul mesure de eCO2 et de VOC. Place ensuite les mesures dans TVOC et eCO2
-   
    
    //Cette condition permet de bloquer la valeur à 9999 dans le cas où le capteur aurait mesuré une valeur supérieure à 9999
    if(sgp.eCO2 > 9999){
@@ -311,9 +315,11 @@ float getCOTwoRate(){
 void alarmDetection()
 {
   sgp.IAQmeasure();//demande au capteur de mesurer une seul mesure de eCO2 et de VOC. Place ensuite les mesures dans TVOC et eCO2
+  unsigned long alarmDuration = millis() + ALARME_DURATION;//Indique la durée de l'alarme
+  unsigned long delayAlarm = 0;//remise à 0 de la variable correspondant à durée de "pause" de l'alarme
   
-  //Tant que le taux de CO2 mesuré dépasse la valeur de la constante "MAX_CO2_ALLOWED" il effectue une alarme spécifique
-  while(sgp.eCO2 >= MAX_CO2_ALLOWED){
+  //Tant que le taux de CO2 mesuré dépasse la valeur de la constante "MAX_CO2_ALLOWED" et qu'il n'a pas dépassé un certain temps il effectue une alarme spécifique
+  while(sgp.eCO2 >= MAX_CO2_ALLOWED && millis() < alarmDuration){
     
       //Ce switch case permet de séléctionner l'alarme en cas de trop haut taux de CO2 suivant la valeur de la variable "alertChoice"
       switch(alertChoice){
@@ -338,12 +344,14 @@ void alarmDetection()
         break;
       }
 
-      sgp.IAQmeasure();//Reprise de mesure
+      sgp.IAQmeasure();//Reprise des mesures
 
-      if(sgp.eCO2 < MAX_CO2_ALLOWED){
-        break;  
+      
+      if(delayAlarm == 0) {
+        delayAlarm = DELAY_ALARME_DURATION;
       }
-  }  
+  }
+  nextAlarm = millis() + delayAlarm;
 }
 
 
@@ -399,7 +407,7 @@ void turnOffClockLED(){
 */
 void visualAlertForCOTwoRate(){
 
-  float nextDisplay = millis() + 100;
+  unsigned long nextDisplay = millis() + 100;
   
   //cette boucle while permet d'allumer chaque LED et de produire du son avec le buzzer durant 100 millisecondes
   while(millis() < nextDisplay){
@@ -416,7 +424,7 @@ void visualAlertForCOTwoRate(){
 
 
 
-  float secondNextDisplay = nextDisplay + 100;//Variable indiquant la durée ou les double points des secondes doivent rester allumés ou éteints
+  unsigned long secondNextDisplay = nextDisplay + 100;//Variable indiquant la durée ou les double points des secondes doivent rester allumés ou éteints
 
   //cette boucle while permet d'allumer chaque LED et de produire du son avec le buzzer durant 100 millisecondes
   while(millis() < secondNextDisplay){
@@ -437,7 +445,7 @@ void visualAlertForCOTwoRate(){
  * Description: Cette fonction fait sonner le buzzer en alternance, elle servira comme alerte sonore en cas de trop haut taux de CO2
 */
 void sonorAlertForCOTwoRate(){
-  float nextDisplay = millis() + 100;
+  unsigned long nextDisplay = millis() + 100;
   
   //cette boucle while permet d'allumer chaque LED et de produire du son avec le buzzer durant 100 millisecondes
   while(millis() < nextDisplay){
@@ -449,7 +457,7 @@ void sonorAlertForCOTwoRate(){
       }
   }
 
-  float secondNextDisplay = nextDisplay + 100;
+  unsigned long secondNextDisplay = nextDisplay + 100;
   
   //cette boucle while permet d'allumer chaque LED et de produire du son avec le buzzer durant 100 millisecondes
   while(millis() < secondNextDisplay){
@@ -468,7 +476,7 @@ void sonorAlertForCOTwoRate(){
  * Description: Cette fonction fait clignoter les 60 LED de l'horloge 60 LED et faire "clignoter" le buzzer avec du son, elle servira comme alerte visuelle et sonore en cas de trop haut taux de CO2
 */
 void doubleAlert(){
-  float nextDisplay = millis() + 100;
+  unsigned long nextDisplay = millis() + 100;
   
   //cette boucle while permet d'allumer chaque LED et de produire du son avec le buzzer durant 100 millisecondes
   while(millis() < nextDisplay){
@@ -485,7 +493,7 @@ void doubleAlert(){
       }
   }
   
-  float secondNextDisplay = nextDisplay + 100;
+  unsigned long secondNextDisplay = nextDisplay + 100;
   
   //cette boucle while permet d'éteindre chaque LED et d'éteindre le buzzer durant 100 millisecondes
   while(millis() < secondNextDisplay){
