@@ -13,12 +13,14 @@
 #include "Adafruit_SGP30.h"//librairie pour le capteur de CO2 (SGP30)
 #include <Adafruit_NeoPixel.h>//librairie pour l'horloge 60 LED
 
+
 //Constantes
 #define NUMPIXELS 60 //Nombre de LED
 #define BACKPACK_LUMINOSITY 110 //Valeur indiquant la luminosité de l'affichage 7 segments de 0 à 15
 #define PIXELS_LUMINOSITY 100 //Valeur indiquant la luminosité des LED de l'horloge de 0 à 255
 #define WAITING_TIME 3000 //Valeur, en millisecondes, indiquant le nombre de millisecondes que va durer chaque alternance pour le premier mode d'affichage de l'affichage 7 segments
-#define MAX_CO2_ALLOWED 650 //Le taux de CO2 maximal autorisé avant une alerte
+#define MAX_CO2_ALLOWED 550 //Le taux de CO2 maximal autorisé avant une alerte
+
 
 //Variables Globales
 Adafruit_BME280 bme;//initialisation du bme
@@ -27,10 +29,12 @@ Adafruit_SGP30 sgp = Adafruit_SGP30();//initialisation du capteur de CO2 SGP30
 Adafruit_7segment backPackDisplay = Adafruit_7segment();//initialisation de l'affichage 7 segments
 Adafruit_NeoPixel ledClock(NUMPIXELS, 2);//Initialisation de l'horloge 60 LED en commençant par indiquer le nombre de LED total que possède notre horloge(60) et sur quel pin elle est branchée(2)
 
+
 //Variables liées au status des capteurs
 unsigned rtcStatus;
 unsigned bmeStatus;
 unsigned sgpStatus;
+int calibrationCounter;//cette variable est un compteur pour effectuer un calibrage du capteur SGP30 
 
 //Variables liées au temps
 int hours = 0;
@@ -40,11 +44,13 @@ bool doublePoints;//cette variable permet l'affichage des secondes en alternant 
 unsigned long timeToWait;//Cette variable permet au programme, en plus de la constante "WAITING_TIME", d'alterner les 3 affichages. À noter que le type choisi "unsigned long" permet de faire durer un maximum de temps l'alternance des 3 affichages, en effet le type "unsigned" simple permet une valeur au maximum codée sur 4 octets, contrairement au type "unsigned long" qui permet une valeur max codée sur 8 octets.
 unsigned lastSecond;//Cette variable permet de garder en mémoire pour chaque boucle effectué par la fonction "loop()" la dernière valeur retournée par la fonction "millis()"
 
+
 //Variables liées à l'affichage 7 segments
 int displayChoice;//Variable indiquant au programme qu'est-ce que l'affichage 7 segments doit afficher
 int phase;//variable indiquant la phase dans laquelle on se trouve
 int stateDisplayButton;//variable lié a l'état du bouton poussoir pour changer l'affichage 7 segments
 int reverseStateDisplayButton;//variable contenant l'inverse de la variable "stateDisplayButton" qui permettra ensuite de bloquer le changement d'état si l'utilisateur reste appuié sur le boutton poussoir
+
 
 //Variables liées aux alertes
 int stateAlertButton;//variable lié a l'état du bouton poussoir pour changer l'alerte en cas de trop haut taux de CO2
@@ -56,6 +62,7 @@ void setup() {
   Serial.begin(9600);
   displayChoice = 0;//Initialisation de la variable "displayChoice" à 0 
   alertChoice = 0;//Initialisation de la variable "alertChoice" à 0 
+  calibrationCounter = 0;
 
   //Configuration des entrée et sortie 
   pinMode(3, INPUT_PULLUP);//initialisation de la pin pour le bouton poussoir lié au changement du contenu de l'affichage 7 segments en INPUT_PULLUP
@@ -78,6 +85,7 @@ void setup() {
   //Partie capteur de CO2 (SGP30)
   sgpStatus = sgp.begin();//initialisation du capteur de CO2 SGP30
 
+  
   //Partie horloge 60 LED
   ledClock.begin(); //initialisation de l'horloge a LED
   ledClock.setBrightness(PIXELS_LUMINOSITY);//Taux de luminosité de 0 à 255
@@ -97,8 +105,6 @@ void setup() {
 void loop() {
   fallingEdgeDetection();//Appel de la fonction pour vérifier l'état des deux boutons poussoir
   alarmDetection();//Appel de la function qui permet d'alerter si le taux de CO2 est trop élevé
-
-  Serial.println(alertChoice);
   
   //cette condition permet, dans le cas ou le programme est dans la phase une, d'alterner les 3 affichages
   if(phase == 1){
@@ -271,13 +277,30 @@ void displayTemperature(){
  * @return une valeur type float correspondant au taux de CO2 mesuré par le capteur SGP30
 */
 float getCOTwoRate(){ 
-   sgp.IAQmeasure();//demande au capteur de mesurer une seul mesure de eCO2 et de VOC. Place ensuite les mesures dans TVOC et eCO2
 
+   
+
+   //Effectue régulièrement un calibrage du capteur SGP30
+   if(calibrationCounter == 100){
+    calibrationCounter = 0;
+
+    Serial.println("calibration");
+    
+    uint16_t TVOC_base, eCO2_base;
+    sgp.getIAQBaseline(&eCO2_base, &TVOC_base);
+   }
+   
+    calibrationCounter++;
+    
+    sgp.IAQmeasure();//demande au capteur de mesurer une seul mesure de eCO2 et de VOC. Place ensuite les mesures dans TVOC et eCO2
+   
+   
    //Cette condition permet de bloquer la valeur à 9999 dans le cas où le capteur aurait mesuré une valeur supérieure à 9999
    if(sgp.eCO2 > 9999){
     return 9999; //retourne 9999 comme valeur
     }
-   
+
+
    return sgp.eCO2; //retourne le taux de CO2 en ppm
 }
 
@@ -328,7 +351,7 @@ void alarmDetection()
  * Description: Cette fonction affichage sur l'affichage 7 segments le taux de CO2 mesurée par le capteur SGP30 
 */
 void displayCOTwoRate(){
-
+  Serial.println("aasd");
   backPackDisplay.print(getCOTwoRate());//Prépare l'affichage du taux de CO2 sur l'affichage 7 segments
   delay(25);//ajout d'un délai pour avoir un affichage plus agréable est ne pas rendre l'affichage 7 segments illisible à cause de la trop grande variation de prise de mesure du taux de CO2 par le capteur SGP30
   backPackDisplay.writeDisplay();//Affiche tous ce qui a été préparé 

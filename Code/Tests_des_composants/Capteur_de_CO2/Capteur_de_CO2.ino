@@ -25,7 +25,7 @@ void setup() {
 
 }
 
-
+int counter = 0;
 void loop() {
 
   //IAQmeasure demande au capte de mesurer une seul mesure de eCO2 et de VOC. Place ensuite les mesures dans TVOC et eCO2
@@ -40,7 +40,7 @@ void loop() {
  
   delay(500);
 
-  /*
+  
   counter++;
   if (counter == 30) {
     counter = 0;
@@ -53,5 +53,5 @@ void loop() {
     Serial.print("****Baseline values: eCO2: 0x"); 
     Serial.print(eCO2_base);
   }
-  */
+  
 }
