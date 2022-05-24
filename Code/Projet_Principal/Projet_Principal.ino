@@ -3,7 +3,7 @@
    Nom : Projet TPI 
    Version initial par: Esteban GIORGIS
    Version initial créé le: 13.05.2022
-   Dernière version le: 20.05.2022
+   Dernière version le: 24.05.2022
 **/
 
 //Librairies
@@ -16,10 +16,10 @@
 
 //Constantes
 #define NUMPIXELS 60 //Nombre de LED
-#define BACKPACK_LUMINOSITY 110 //Valeur indiquant la luminosité de l'affichage 7 segments de 0 à 15
+#define BACKPACK_LUMINOSITY 10 //Valeur indiquant la luminosité de l'affichage 7 segments de 0 à 15
 #define PIXELS_LUMINOSITY 100 //Valeur indiquant la luminosité des LED de l'horloge de 0 à 255
 #define WAITING_TIME 3000 //Valeur, en millisecondes, indiquant le nombre de millisecondes que va durer chaque alternance pour le premier mode d'affichage de l'affichage 7 segments
-#define MAX_CO2_ALLOWED 550 //Le taux de CO2 maximal autorisé avant une alerte
+#define MAX_CO2_ALLOWED 1500 //Le taux de CO2 maximal autorisé avant une alerte
 
 
 //Variables Globales
@@ -351,7 +351,6 @@ void alarmDetection()
  * Description: Cette fonction affichage sur l'affichage 7 segments le taux de CO2 mesurée par le capteur SGP30 
 */
 void displayCOTwoRate(){
-  Serial.println("aasd");
   backPackDisplay.print(getCOTwoRate());//Prépare l'affichage du taux de CO2 sur l'affichage 7 segments
   delay(25);//ajout d'un délai pour avoir un affichage plus agréable est ne pas rendre l'affichage 7 segments illisible à cause de la trop grande variation de prise de mesure du taux de CO2 par le capteur SGP30
   backPackDisplay.writeDisplay();//Affiche tous ce qui a été préparé 
