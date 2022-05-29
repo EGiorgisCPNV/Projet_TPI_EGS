@@ -1,10 +1,10 @@
-
 /**
-   Nom : Projet TPI 
+   Nom : Projet Horloge 60 LED avec capteurs  
    Version initial par: Esteban GIORGIS
    Version initial créé le: 13.05.2022
-   Dernière version le: 24.05.2022
+   Dernière version le: 29.05.2022
 **/
+
 
 //Librairies
 #include <Adafruit_BME280.h>//librairie pour le capteur BME280
@@ -19,9 +19,10 @@
 #define BACKPACK_LUMINOSITY 10 //Valeur indiquant la luminosité de l'affichage 7 segments de 0 à 15
 #define PIXELS_LUMINOSITY 100 //Valeur indiquant la luminosité des LED de l'horloge de 0 à 255
 #define WAITING_TIME 3000 //Valeur, en millisecondes, indiquant le nombre de millisecondes que va durer chaque alternance pour le premier mode d'affichage de l'affichage 7 segments
-#define MAX_CO2_ALLOWED 650 //Le taux de CO2 maximal autorisé avant une alerte
+#define MAX_CO2_ALLOWED 1500 //Le taux de CO2 maximal autorisé avant une alerte
 #define ALARME_DURATION 2000//Valeur en milliseconde indiquant la durée max de l'alerte en cas de trop haut taux de CO2
 #define DELAY_ALARME_DURATION 5000//Valeur en milliseconde indiquant la durée à laquelle même si le taux de CO2 est trop élevé, aucune alarme ne sera générée
+
 
 //Variables Globales
 Adafruit_BME280 bme;//initialisation du bme
@@ -35,7 +36,10 @@ Adafruit_NeoPixel ledClock(NUMPIXELS, 2);//Initialisation de l'horloge 60 LED en
 unsigned rtcStatus;
 unsigned bmeStatus;
 unsigned sgpStatus;
-int calibrationCounter;//cette variable est un compteur pour effectuer un calibrage du capteur SGP30 
+
+
+//Variables liées aux capteurs
+int calibrationCounter;//cette variable est un compteur pour effectuer régulièrement un calibrage du capteur SGP30 
 
 
 //Variables liées au temps
@@ -104,7 +108,6 @@ void setup() {
 }
 
 
-
 void loop() {
   fallingEdgeDetection();//Appel de la fonction pour vérifier l'état des deux boutons poussoir
 
@@ -132,7 +135,6 @@ void loop() {
       }
   }
   
-
   
   //Ce switch case permet de faire varier le contenu de l'affichage 7 segments suivant la valeur de la variable "displayChoice"
   switch(displayChoice){
@@ -310,7 +312,7 @@ float getCOTwoRate(){
 
 
 /*
- * Description: Suivant certaines conditions, cette fonction appellera une ou plusieurs alertes dans le cas ou le taux de CO2 dépasse un seuil voulu
+ * Description: Suivant certaines conditions, cette fonction appellera une ou plusieurs alertes dans le cas ou le taux de CO2 dépasse un seuil voulu et que le délai de pause de l'alarme est égale à 0
 */
 void alarmDetection()
 {
@@ -351,7 +353,7 @@ void alarmDetection()
         delayAlarm = DELAY_ALARME_DURATION;
       }
   }
-  nextAlarm = millis() + delayAlarm;
+  nextAlarm = millis() + delayAlarm;//indique le temps d'attente avant la prochaine génération d'alarme
 }
 
 
@@ -364,7 +366,6 @@ void displayCOTwoRate(){
   backPackDisplay.writeDisplay();//Affiche tous ce qui a été préparé 
 
 }
-
 
 
 /*
@@ -421,8 +422,6 @@ void visualAlertForCOTwoRate(){
         break;  
       }
   }
-
-
 
   unsigned long secondNextDisplay = nextDisplay + 100;//Variable indiquant la durée ou les double points des secondes doivent rester allumés ou éteints
 
