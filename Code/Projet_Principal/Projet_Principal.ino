@@ -1,10 +1,9 @@
 /**
-   Nom : Projet Horloge 60 LED avec capteurs  
+   Nom : Projet TPI 
    Version initial par: Esteban GIORGIS
    Version initial créé le: 13.05.2022
    Dernière version le: 29.05.2022
 **/
-
 
 //Librairies
 #include <Adafruit_BME280.h>//librairie pour le capteur BME280
@@ -353,7 +352,7 @@ void alarmDetection()
         delayAlarm = DELAY_ALARME_DURATION;
       }
   }
-  nextAlarm = millis() + delayAlarm;//indique le temps d'attente avant la prochaine génération d'alarme
+  nextAlarm = millis() + delayAlarm;
 }
 
 
